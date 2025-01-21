@@ -26,6 +26,12 @@ cd kolobok
 
 Compatible with all modern browsers (Chrome, Firefox, Safari, Edge)
 
+## Demo
+
+<img src="screenshot.png" width="50%" alt="Kolobok AI Game screenshot" />
+
+https://youtu.be/XrYT-vb7gLU
+
 ## Credits
 
-Generated with the assistance of O1 model
+Generated with the assistance of OpenAI O1 model
