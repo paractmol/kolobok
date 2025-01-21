@@ -28,7 +28,7 @@ Compatible with all modern browsers (Chrome, Firefox, Safari, Edge)
 
 ## Demo
 
-<img src="screenshot.png" width="50%" alt="Kolobok AI Game screenshot" />
+<img src="screenshot.png" width="70%" alt="Kolobok AI Game screenshot" />
 
 https://youtu.be/XrYT-vb7gLU
 
