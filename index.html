@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Kolobok AI Game</title>
+  <style>
+    body {
+      background: #000;
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+      color: #fff;
+    }
+    #gameCanvas {
+      background: #222;
+      display: block;
+      margin: 20px auto;
+      border: 1px solid #555;
+    }
+    #scoreDisplay {
+      text-align: center;
+      font-size: 24px;
+      margin-top: 0;
+    }
+    #winMessage {
+      text-align: center;
+      font-size: 32px;
+      color: #00ff00;
+      display: none; /* Hidden initially */
+    }
+  </style>
+</head>
+<body>
+  <h1 id="scoreDisplay">Score: 0</h1>
+  <div id="winMessage">You Win!</div>
+  <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+  <script>
+    // ----------------------------------------------------
+    //  1. SETUP
+    // ----------------------------------------------------
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Score + display
+    let score = 0;
+    const scoreDisplay = document.getElementById("scoreDisplay");
+    const winMessage = document.getElementById("winMessage");
+
+    // Kolobok
+    let kolobokX = canvas.width / 2;
+    let kolobokY = canvas.height / 2;
+    const kolobokRadius = 20;
+    const kolobokSpeed = 2.5;  // AI moves at a moderate speed
+    let spinAngle = 0;         // For the rolling effect
+
+    // Food pellets
+    const pelletCount = 10;
+    const pelletRadius = 5;
+    let pellets = [];
+
+    // ----------------------------------------------------
+    //  2. SPAWN PELLETS
+    // ----------------------------------------------------
+    function spawnPellets(count) {
+      pellets = [];
+      for (let i = 0; i < count; i++) {
+        pellets.push({
+          x: Math.random() * (canvas.width - 2*pelletRadius) + pelletRadius,
+          y: Math.random() * (canvas.height - 2*pelletRadius) + pelletRadius,
+          radius: pelletRadius
+        });
+      }
+    }
+
+    // ----------------------------------------------------
+    //  3. HELPER FUNCTIONS
+    // ----------------------------------------------------
+    // Distance between two points
+    function distance(x1, y1, x2, y2) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      return Math.sqrt(dx*dx + dy*dy);
+    }
+
+    // Circle vs circle collision
+    function isCollidingCircle(x1, y1, r1, x2, y2, r2) {
+      return distance(x1, y1, x2, y2) < (r1 + r2);
+    }
+
+    // Update the score on the page
+    function updateScoreDisplay() {
+      scoreDisplay.textContent = `Score: ${score}`;
+    }
+
+    // Check win condition
+    function checkWin() {
+      if (pellets.length === 0) {
+        winMessage.style.display = "block";
+      }
+    }
+
+    // ----------------------------------------------------
+    //  4. AI LOGIC
+    // ----------------------------------------------------
+    /**
+     * Find the index of the closest pellet to Kolobok
+     */
+    function findClosestPellet() {
+      if (pellets.length === 0) return -1; // No pellets left
+
+      let closestIndex = 0;
+      let minDist = distance(kolobokX, kolobokY, pellets[0].x, pellets[0].y);
+      for (let i = 1; i < pellets.length; i++) {
+        let d = distance(kolobokX, kolobokY, pellets[i].x, pellets[i].y);
+        if (d < minDist) {
+          minDist = d;
+          closestIndex = i;
+        }
+      }
+      return closestIndex;
+    }
+
+    /**
+     * Move Kolobok towards the closest pellet (greedy approach)
+     */
+    function moveTowardPellet() {
+      const closestIndex = findClosestPellet();
+      if (closestIndex === -1) return;  // No pellets to move toward
+
+      // Vector from Kolobok to pellet
+      const dx = pellets[closestIndex].x - kolobokX;
+      const dy = pellets[closestIndex].y - kolobokY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist === 0) return;
+
+      // Normalize the vector and multiply by speed
+      const vx = (dx / dist) * kolobokSpeed;
+      const vy = (dy / dist) * kolobokSpeed;
+
+      // Update Kolobok's position
+      kolobokX += vx;
+      kolobokY += vy;
+
+      // Imitate rolling (spinAngle increases or decreases based on movement)
+      // For simplicity, let's base rotation on the total movement magnitude
+      const moveMag = Math.sqrt(vx*vx + vy*vy); 
+      spinAngle += moveMag * 0.15; // Tweak coefficient for faster/slower spinning
+    }
+
+    // ----------------------------------------------------
+    //  5. UPDATE & DRAW
+    // ----------------------------------------------------
+    function update() {
+      // Move Kolobok via AI
+      moveTowardPellet();
+
+      // Prevent going out of bounds
+      if (kolobokX < kolobokRadius) {
+        kolobokX = kolobokRadius;
+      }
+      if (kolobokX > canvas.width - kolobokRadius) {
+        kolobokX = canvas.width - kolobokRadius;
+      }
+      if (kolobokY < kolobokRadius) {
+        kolobokY = kolobokRadius;
+      }
+      if (kolobokY > canvas.height - kolobokRadius) {
+        kolobokY = canvas.height - kolobokRadius;
+      }
+
+      // Check for collision with pellets
+      for (let i = pellets.length - 1; i >= 0; i--) {
+        if (isCollidingCircle(kolobokX, kolobokY, kolobokRadius, 
+                              pellets[i].x, pellets[i].y, pellets[i].radius)) {
+          // Remove pellet
+          pellets.splice(i, 1);
+          score++;
+          updateScoreDisplay();
+          checkWin();
+        }
+      }
+    }
+
+    function drawPellets() {
+      pellets.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, 2*Math.PI);
+        ctx.fillStyle = "#ff0000";
+        ctx.fill();
+        ctx.closePath();
+      });
+    }
+
+    function drawKolobok() {
+      ctx.save();
+
+      // Translate to Kolobok's position
+      ctx.translate(kolobokX, kolobokY);
+      // Rotate according to spinAngle
+      ctx.rotate(spinAngle);
+
+      // Draw body
+      ctx.beginPath();
+      ctx.arc(0, 0, kolobokRadius, 0, 2*Math.PI);
+      ctx.fillStyle = "#ffcc00";
+      ctx.fill();
+      ctx.closePath();
+
+      // Eyes
+      ctx.beginPath();
+      ctx.arc(-kolobokRadius/4, -kolobokRadius/4, 3, 0, 2*Math.PI);
+      ctx.fillStyle = "#000";
+      ctx.fill();
+      ctx.closePath();
+
+      ctx.beginPath();
+      ctx.arc(kolobokRadius/4, -kolobokRadius/4, 3, 0, 2*Math.PI);
+      ctx.fillStyle = "#000";
+      ctx.fill();
+      ctx.closePath();
+
+      // Smile
+      ctx.beginPath();
+      ctx.arc(0, kolobokRadius/6, kolobokRadius/3, 0, Math.PI, false);
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.closePath();
+
+      ctx.restore();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawPellets();
+      drawKolobok();
+    }
+
+    // ----------------------------------------------------
+    //  6. MAIN LOOP
+    // ----------------------------------------------------
+    function gameLoop() {
+      // If pellets are gone, game is basically over, but we keep drawing
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // ----------------------------------------------------
+    //  7. START GAME
+    // ----------------------------------------------------
+    function startGame() {
+      score = 0;
+      updateScoreDisplay();
+      winMessage.style.display = "none";
+
+      // Center Kolobok
+      kolobokX = canvas.width / 2;
+      kolobokY = canvas.height / 2;
+      spinAngle = 0;
+
+      // Create random pellets
+      spawnPellets(pelletCount);
+
+      gameLoop();
+    }
+
+    startGame();
+  </script>
+</body>
+</html>
